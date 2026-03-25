@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CompArch Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #12121a;
+    --border: #1e1e2e;
+    --accent: #00ffa3;
+    --accent2: #ff6b35;
+    --accent3: #a78bfa;
+    --text: #e0e0f0;
+    --muted: #555570;
+    --input-bg: #0d0d16;
+    --card: #0f0f1a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(0,255,163,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(167,139,250,0.07) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 3px 10px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 32px;
+    background: var(--panel);
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 14px 28px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    background: rgba(0,255,163,0.06);
+  }
+
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab-btn:hover:not(.active) {
+    color: var(--text);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .container {
+    width: 100%;
+    max-width: 760px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    display: none;
+  }
+
+  .panel.active { display: block; }
+
+  .section-title {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .op-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .op-btn {
+    padding: 12px 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-weight: 700;
+  }
+
+  .op-btn:hover, .op-btn.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,163,0.06);
+    box-shadow: 0 0 12px rgba(0,255,163,0.1);
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 16px;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,163,0.08);
+  }
+
+  input::placeholder { color: var(--muted); }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .input-row.single { grid-template-columns: 1fr; }
+
+  .calc-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .calc-btn:hover {
+    background: #00e890;
+    box-shadow: 0 0 20px rgba(0,255,163,0.3);
+    transform: translateY(-1px);
+  }
+
+  .calc-btn:active { transform: translateY(0); }
+
+  .result-box {
+    margin-top: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .result-box.show { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-title {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+
+  .result-row:last-child { border-bottom: none; }
+
+  .result-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    min-width: 100px;
+  }
+
+  .result-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+    text-align: right;
+    word-break: break-all;
+  }
+
+  .result-value.primary {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .error-box {
+    margin-top: 16px;
+    background: rgba(255, 107, 53, 0.08);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    display: none;
+  }
+
+  .error-box.show { display: block; }
+
+  .hint {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    margin-top: -10px;
+    margin-bottom: 16px;
+  }
+
+  .conv-from-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  select option { background: var(--panel); }
+
+  @media (max-width: 600px) {
+    .panel { padding: 20px; }
+    .op-grid { grid-template-columns: repeat(2, 1fr); }
+    .input-row { grid-template-columns: 1fr; }
+    .conv-from-grid { grid-template-columns: repeat(2, 1fr); }
+    .tabs { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header>
+  <div class="badge">Computer Architecture</div>
+  <h1>Number Systems<br>Calculator</h1>
+  <p class="subtitle">Binary Operations &amp; Base Conversions</p>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('binary')">⊕ Binary Ops</button>
+    <button class="tab-btn" onclick="switchTab('convert')">⇄ Conversions</button>
+  </div>
+
+  <!-- BINARY OPERATIONS -->
+  <div class="panel active" id="tab-binary">
+    <div class="section-title">Select Operation</div>
+    <div class="op-grid">
+      <button class="op-btn selected" onclick="selectOp(this,'add')">+ Addition</button>
+      <button class="op-btn" onclick="selectOp(this,'sub')">− Subtraction</button>
+      <button class="op-btn" onclick="selectOp(this,'mul')">× Multiplication</button>
+      <button class="op-btn" onclick="selectOp(this,'div')">÷ Division</button>
+      <button class="op-btn" onclick="selectOp(this,'twos')">~ 2's Complement</button>
+    </div>
+
+    <div id="bin-inputs">
+      <div class="input-row" id="bin-two-inputs">
+        <div>
+          <label>Binary Number A</label>
+          <input type="text" id="binA" placeholder="e.g. 0110.1" oninput="cleanBinInput(this)">
+          <div class="hint">Use signed 2's complement (MSB=sign)</div>
+        </div>
+        <div>
+          <label>Binary Number B</label>
+          <input type="text" id="binB" placeholder="e.g. 0010.01" oninput="cleanBinInput(this)">
+        </div>
+      </div>
+      <div class="input-row single" id="bin-one-input" style="display:none">
+        <div>
+          <label>Binary Number</label>
+          <input type="text" id="binSingle" placeholder="e.g. 1010.01" oninput="cleanBinInput(this)">
+          <div class="hint">Use signed 2's complement (MSB=sign)</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="doBinaryOp()">Calculate</button>
+
+    <div class="error-box" id="bin-error"></div>
+    <div class="result-box" id="bin-result">
+      <div class="result-title">Result</div>
+      <div id="bin-result-rows"></div>
+    </div>
+  </div>
+
+  <!-- CONVERSIONS -->
+  <div class="panel" id="tab-convert">
+    <div class="section-title">Convert From</div>
+    <div class="conv-from-grid">
+      <button class="op-btn selected" onclick="selectFrom(this,'bin')">Binary</button>
+      <button class="op-btn" onclick="selectFrom(this,'dec')">Decimal</button>
+      <button class="op-btn" onclick="selectFrom(this,'oct')">Octal</button>
+      <button class="op-btn" onclick="selectFrom(this,'hex')">Hexadecimal</button>
+    </div>
+
+    <label id="conv-input-label">Binary Number</label>
+    <input type="text" id="convInput" placeholder="e.g. 1010.01" id="convInput">
+    <div class="hint" id="conv-hint">Signed binary (2's complement). Decimal: use − prefix for negatives.</div>
+
+    <button class="calc-btn" onclick="doConvert()">Convert</button>
+
+    <div class="error-box" id="conv-error"></div>
+    <div class="result-box" id="conv-result">
+      <div class="result-title">Converted Values</div>
+      <div id="conv-result-rows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+let currentOp = 'add';
+let currentFrom = 'bin';
+
+// ─── Tab / Selection helpers ─────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='binary'&&i===0)||(tab==='convert'&&i===1)));
+  document.getElementById('tab-binary').classList.toggle('active', tab==='binary');
+  document.getElementById('tab-convert').classList.toggle('active', tab==='convert');
+}
+
+function selectOp(el, op) {
+  document.querySelectorAll('#tab-binary .op-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  currentOp = op;
+  document.getElementById('bin-two-inputs').style.display = (op==='twos') ? 'none' : '';
+  document.getElementById('bin-one-input').style.display  = (op==='twos') ? ''     : 'none';
+  hideResult('bin');
+}
+
+function selectFrom(el, from) {
+  document.querySelectorAll('.conv-from-grid .op-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  currentFrom = from;
+  const labels = {bin:'Binary Number', dec:'Decimal Number', oct:'Octal Number', hex:'Hexadecimal Number'};
+  const hints  = {bin:'Signed binary (2\'s complement), MSB is sign bit.', dec:'Use − prefix for negatives (e.g. -13.5).', oct:'Use − prefix for negatives (e.g. -17).', hex:'Use − prefix for negatives (e.g. -1A.4).'};
+  const phs    = {bin:'e.g. 1010.0100', dec:'e.g. -13.5', oct:'e.g. 17.4', hex:'e.g. 1A.4'};
+  document.getElementById('conv-input-label').textContent = labels[from];
+  document.getElementById('conv-hint').textContent = hints[from];
+  document.getElementById('convInput').placeholder = phs[from];
+  hideResult('conv');
+}
+
+function cleanBinInput(el) {
+  el.value = el.value.replace(/[^01.]/g, '');
+}
+
+function hideResult(prefix) {
+  document.getElementById(prefix+'-result').classList.remove('show');
+  document.getElementById(prefix+'-error').classList.remove('show');
+}
+
+function showError(prefix, msg) {
+  const el = document.getElementById(prefix+'-error');
+  el.textContent = msg;
+  el.classList.add('show');
+  document.getElementById(prefix+'-result').classList.remove('show');
+}
+
+function showResult(prefix, rows) {
+  document.getElementById(prefix+'-error').classList.remove('show');
+  const container = document.getElementById(prefix+'-result-rows');
+  container.innerHTML = rows.map((r,i) =>
+    `<div class="result-row">
+      <span class="result-label">${r.label}</span>
+      <span class="result-value ${i===0?'primary':''}">${r.value}</span>
+    </div>`
+  ).join('');
+  document.getElementById(prefix+'-result').classList.add('show');
+}
+
+// ─── Core Math (ported from C#) ──────────────────────────
+
+function padBinary(binary) {
+  binary = binary.replace(/\s/g, '');
+  const di = binary.indexOf('.');
+  if (di === -1) {
+    let ip = binary;
+    while (ip.length % 4 !== 0) ip = '0' + ip;
+    return ip;
+  }
+  let ip = binary.slice(0, di);
+  let fp = binary.slice(di+1);
+  while (ip.length % 4 !== 0) ip = '0' + ip;
+  while (fp.length % 4 !== 0) fp += '0';
+  return ip + '.' + fp;
+}
+
+function twosComplement(bin) {
+  let bits = bin.split('');
+  let foundOne = false;
+  for (let i = bits.length-1; i >= 0; i--) {
+    if (bits[i] === '.') continue;
+    if (!foundOne) {
+      if (bits[i] === '1') { foundOne = true; }
+    } else {
+      bits[i] = bits[i] === '0' ? '1' : '0';
+    }
+  }
+  return bits.join('');
+}
+
+function addBinary(a, b) {
+  a = padBinary(a);
+  b = padBinary(b);
+  const isNeg1 = a[0] === '1';
+  const isNeg2 = b[0] === '1';
+
+  // align decimal points
+  const da = a.indexOf('.'), db = b.indexOf('.');
+  let ai = da === -1 ? a : a.slice(0, da);
+  let af = da === -1 ? '' : a.slice(da+1);
+  let bi = db === -1 ? b : b.slice(0, db);
+  let bf = db === -1 ? '' : b.slice(db+1);
+
+  while (af.length < bf.length) af += '0';
+  while (bf.length < af.length) bf += '0';
+  while (ai.length < bi.length) ai = '0' + ai;
+  while (bi.length < ai.length) bi = '0' + bi;
+
+  const aFull = ai + af;
+  const bFull = bi + bf;
+  const fracLen = af.length;
+
+  let result = '';
+  let carry = 0;
+  for (let i = aFull.length-1; i >= 0; i--) {
+    const sum = (aFull[i]-'0') + (bFull[i]-'0') + carry;
+    result = (sum % 2) + result;
+    carry = Math.floor(sum / 2);
+  }
+
+  if (fracLen > 0) result = result.slice(0, result.length-fracLen) + '.' + result.slice(result.length-fracLen);
+
+  if (!isNeg1 && !isNeg2) {
+    result = padBinary(result);
+    result = '0000' + result;
+  }
+  return result;
+}
+
+function binaryMultiplication(bin1, bin2) {
+  const isNeg1 = bin1[0] === '1';
+  const isNeg2 = bin2[0] === '1';
+  const dec1 = bin1.includes('.') ? bin1.length - bin1.indexOf('.') - 1 : 0;
+  const dec2 = bin2.includes('.') ? bin2.length - bin2.indexOf('.') - 1 : 0;
+  const totalDecPlaces = dec1 + dec2;
+
+  bin1 = bin1.replace('.','');
+  bin2 = bin2.replace('.','');
+
+  let result = '0';
+  const bitLength = bin1.length + bin2.length;
+
+  for (let i = bin2.length-1; i >= 0; i--) {
+    if (bin2[i] === '1') {
+      let shifted = bin1 + '0'.repeat(bin2.length-1-i);
+      if (isNeg1) {
+        while (shifted.length < bitLength) shifted = '1' + shifted;
+      }
+      if (i === 0 && isNeg2) {
+        while (shifted.length < bitLength) shifted = (isNeg1?'1':'0') + shifted;
+        shifted = twosComplement(shifted);
+      }
+      result = binaryAddMulti(result, shifted);
+    }
+  }
+
+  if (totalDecPlaces > 0) {
+    if (result.length <= totalDecPlaces) {
+      result = '0.' + '0'.repeat(totalDecPlaces - result.length) + result;
+    } else {
+      result = result.slice(0, result.length-totalDecPlaces) + '.' + result.slice(result.length-totalDecPlaces);
+    }
+  }
+  return result;
+}
+
+function binaryAddMulti(a, b) {
+  let result = '';
+  let carry = 0;
+  let i = a.length-1, j = b.length-1;
+  while (i >= 0 || j >= 0) {
+    const b1 = i >= 0 ? +a[i] : 0;
+    const b2 = j >= 0 ? +b[j] : 0;
+    const sum = b1 + b2 + carry;
+    result = (sum % 2) + result;
+    carry = Math.floor(sum / 2);
+    i--; j--;
+  }
+  return result;
+}
+
+function compareBin(a, b) {
+  if (a.length > b.length) return true;
+  if (a.length < b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] > b[i]) return true;
+    if (a[i] < b[i]) return false;
+  }
+  return true;
+}
+
+function subtractBin(a, b) {
+  const len = Math.max(a.length, b.length);
+  let result = new Array(len);
+  let borrow = 0;
+  let ai = a.length-1, bi = b.length-1, ki = len-1;
+  while (ki >= 0) {
+    const ba = ai >= 0 ? +a[ai] : 0;
+    const bb = bi >= 0 ? +b[bi] : 0;
+    let diff = ba - bb - borrow;
+    if (diff < 0) { diff += 2; borrow = 1; } else borrow = 0;
+    result[ki] = diff;
+    ai--; bi--; ki--;
+  }
+  const s = result.join('').replace(/^0+/,'');
+  return s.length > 0 ? s : '0';
+}
+
+function divideBinary(dividend, divisor, precision) {
+  let quotient = '';
+  let remainder = '';
+  let index = 0, fracCount = 0;
+  while (index < dividend.length || (remainder.length > 0 && fracCount < precision)) {
+    if (index < dividend.length) {
+      remainder += dividend[index++];
+    } else {
+      if (fracCount++ === 0) quotient += '.';
+      remainder += '0';
+    }
+    remainder = remainder.replace(/^0+/,'') || '0';
+    if (compareBin(remainder, divisor)) {
+      quotient += '1';
+      remainder = subtractBin(remainder, divisor);
+    } else {
+      quotient += '0';
+    }
+  }
+  return quotient.replace(/^0+/,'') || '0';
+}
+
+function binaryLongDivision(dividendInput, divisorInput, precision) {
+  let dividend = dividendInput.replace(/^0+/,'') || '0';
+  let divisor  = divisorInput.replace(/^0+/,'')  || '0';
+  if (!divisor || divisor === '0') throw new Error('Division by zero');
+
+  const ddf = dividend.includes('.') ? dividend.length - dividend.indexOf('.') - 1 : 0;
+  const dvf = divisor.includes('.')  ? divisor.length  - divisor.indexOf('.') - 1  : 0;
+  const adj = ddf - dvf;
+
+  const nd = dividend.replace('.','');
+  const nv = divisor.replace('.','');
+  let quotient = divideBinary(nd, nv, precision);
+
+  if (adj > 0 && adj < quotient.length) {
+    quotient = quotient.slice(0, quotient.length-adj) + '.' + quotient.slice(quotient.length-adj);
+  } else if (adj >= quotient.length) {
+    quotient = '0.' + '0'.repeat(adj - quotient.length) + quotient;
+  }
+  return quotient.replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function xToDecimal(str, base) {
+  str = str.replace(/-/g,'').replace(/\s/g,'').toUpperCase();
+  const DIGITS = '0123456789ABCDEF';
+  let val = 0;
+  const pi = str.indexOf('.');
+  const pIdx = pi === -1 ? str.length : pi;
+  for (let i = 0; i < pIdx; i++) {
+    val += DIGITS.indexOf(str[i]) * Math.pow(base, pIdx-i-1);
+  }
+  for (let i = pIdx+1; i < str.length; i++) {
+    val += DIGITS.indexOf(str[i]) * Math.pow(base, -(i-pIdx));
+  }
+  return val;
+}
+
+function decimalToX(number, base) {
+  const DIGITS = '0123456789ABCDEF';
+  if (number < 0) number = -number;
+  let whole = Math.floor(number);
+  let frac  = number - whole;
+  let result = '';
+
+  while (whole > 0) {
+    result = DIGITS[whole % base] + result;
+    whole = Math.floor(whole / base);
+  }
+  if (result === '') result = '0';
+
+  if (frac !== 0 && (base === 8 || base === 16 || base === 2)) result += '.';
+
+  for (let i = 0; i < 10 && frac !== 0; i++) {
+    frac *= base;
+    const d = Math.floor(frac);
+    result += DIGITS[d];
+    frac -= d;
+  }
+  if (base === 2) result = padBinary(result);
+  return result;
+}
+
+// ─── Format result rows ──────────────────────────────────
+
+function formatResultRows(binaryResult) {
+  // binaryResult might be negative (MSB=1)
+  let bin = binaryResult;
+  let isNeg = false;
+  if (bin[0] === '1') {
+    isNeg = true;
+    bin = twosComplement(bin);
+  }
+  const dec = xToDecimal(bin, 2);
+  const decStr = isNeg ? `-${dec}` : `${dec}`;
+  const oct = decimalToX(dec, 8);
+  const hex = decimalToX(dec, 16);
+  return [
+    { label: 'Binary',      value: binaryResult },
+    { label: 'Decimal',     value: decStr },
+    { label: 'Octal',       value: isNeg ? `-${oct}` : oct },
+    { label: 'Hexadecimal', value: isNeg ? `-${hex}` : hex },
+  ];
+}
+
+// ─── Binary Operations handler ───────────────────────────
+
+function doBinaryOp() {
+  hideResult('bin');
+  try {
+    if (currentOp === 'twos') {
+      const v = (document.getElementById('binSingle').value || '').replace(/\s/g,'');
+      if (!v) return showError('bin', 'Please enter a binary number.');
+      if (!/^[01.]+$/.test(v)) return showError('bin', 'Only 0, 1, and . allowed in binary input.');
+      const padded = padBinary(v);
+      const comp   = twosComplement(padded);
+      const isNeg  = comp[0] === '1';
+      const mag    = isNeg ? twosComplement(comp) : comp;
+      const dec    = xToDecimal(mag, 2);
+      showResult('bin', [
+        { label: 'Input (padded)',   value: padded },
+        { label: "2's Complement",   value: comp },
+        { label: 'Decimal',          value: isNeg ? `-${dec}` : `${dec}` },
+      ]);
+      return;
+    }
+
+    let a = (document.getElementById('binA').value || '').replace(/\s/g,'');
+    let b = (document.getElementById('binB').value || '').replace(/\s/g,'');
+    if (!a || !b) return showError('bin', 'Please enter both binary numbers.');
+    if (!/^[01.]+$/.test(a) || !/^[01.]+$/.test(b)) return showError('bin', 'Only 0, 1, and . allowed in binary inputs.');
+
+    a = padBinary(a);
+    b = padBinary(b);
+
+    let result;
+
+    if (currentOp === 'add') {
+      result = addBinary(a, b);
+    } else if (currentOp === 'sub') {
+      let b2 = b;
+      if (a[0] === '0' && b[0] === '1') {
+        result = addBinary(a, b2);
+      } else {
+        b2 = twosComplement(b2);
+        result = addBinary(a, b2);
+      }
+    } else if (currentOp === 'mul') {
+      result = binaryMultiplication(a, b);
+    } else if (currentOp === 'div') {
+      const neg1 = a[0] === '1';
+      const neg2 = b[0] === '1';
+      let aa = neg1 ? twosComplement(a) : a;
+      let bb = neg2 ? twosComplement(b) : b;
+      let dr = binaryLongDivision(aa, bb, 10);
+      dr = padBinary(dr);
+      if (neg1 ^ neg2) dr = twosComplement(dr);
+      result = dr;
+    }
+
+    showResult('bin', formatResultRows(result));
+  } catch(e) {
+    showError('bin', e.message || 'Calculation error');
+  }
+}
+
+// ─── Conversions handler ─────────────────────────────────
+
+function doConvert() {
+  hideResult('conv');
+  try {
+    const raw = (document.getElementById('convInput').value || '').trim();
+    if (!raw) return showError('conv', 'Please enter a value.');
+
+    let rows = [];
+
+    if (currentFrom === 'bin') {
+      if (!/^[01.]+$/.test(raw)) return showError('conv', 'Binary: only 0, 1, and . allowed.');
+      const padded = padBinary(raw);
+      if (padded[0] === '1') {
+        const mag = twosComplement(padded);
+        const dec = xToDecimal(mag, 2);
+        rows = [
+          { label: 'Binary',      value: twosComplement('0000' + mag) },
+          { label: 'Decimal',     value: `-${dec}` },
+          { label: 'Octal',       value: `-${decimalToX(dec, 8)}` },
+          { label: 'Hexadecimal', value: `-${decimalToX(dec, 16)}` },
+        ];
+      } else {
+        const dec = xToDecimal(padded, 2);
+        rows = [
+          { label: 'Binary',      value: padded },
+          { label: 'Decimal',     value: `${dec}` },
+          { label: 'Octal',       value: decimalToX(dec, 8) },
+          { label: 'Hexadecimal', value: decimalToX(dec, 16) },
+        ];
+      }
+
+    } else if (currentFrom === 'dec') {
+      if (!/^-?[0-9]+(\.[0-9]+)?$/.test(raw)) return showError('conv', 'Invalid decimal number.');
+      const num = parseFloat(raw);
+      const isNeg = num < 0;
+      const abs   = Math.abs(num);
+      const binAbs = decimalToX(abs, 2);
+      rows = [
+        { label: 'Decimal',     value: `${num}` },
+        { label: 'Binary',      value: isNeg ? twosComplement('0000' + binAbs) : `0000${binAbs}` },
+        { label: 'Octal',       value: isNeg ? `-${decimalToX(abs, 8)}` : decimalToX(abs, 8) },
+        { label: 'Hexadecimal', value: isNeg ? `-${decimalToX(abs, 16)}` : decimalToX(abs, 16) },
+      ];
+
+    } else if (currentFrom === 'oct') {
+      const isNeg = raw[0] === '-';
+      const abs   = isNeg ? raw.slice(1) : raw;
+      if (!/^[0-7.]+$/.test(abs)) return showError('conv', 'Octal: digits 0–7 only.');
+      const dec = xToDecimal(abs, 8);
+      const binAbs = decimalToX(dec, 2);
+      rows = [
+        { label: 'Octal',       value: raw },
+        { label: 'Decimal',     value: isNeg ? `-${dec}` : `${dec}` },
+        { label: 'Binary',      value: isNeg ? twosComplement('0000' + binAbs) : `0000 ${binAbs}` },
+        { label: 'Hexadecimal', value: isNeg ? `-${decimalToX(dec, 16)}` : decimalToX(dec, 16) },
+      ];
+
+    } else if (currentFrom === 'hex') {
+      const isNeg = raw[0] === '-';
+      const abs   = isNeg ? raw.slice(1) : raw;
+      if (!/^[0-9A-Fa-f.]+$/.test(abs)) return showError('conv', 'Hexadecimal: digits 0–9, A–F only.');
+      const dec = xToDecimal(abs.toUpperCase(), 16);
+      const binAbs = decimalToX(dec, 2);
+      rows = [
+        { label: 'Hexadecimal', value: raw.toUpperCase() },
+        { label: 'Decimal',     value: isNeg ? `-${dec}` : `${dec}` },
+        { label: 'Octal',       value: isNeg ? `-${decimalToX(dec, 8)}` : decimalToX(dec, 8) },
+        { label: 'Binary',      value: isNeg ? twosComplement('0000' + binAbs) : `0000${binAbs}` },
+      ];
+    }
+
+    showResult('conv', rows);
+  } catch(e) {
+    showError('conv', e.message || 'Conversion error');
+  }
+}
+</script>
+</body>
+</html>
